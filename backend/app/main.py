@@ -105,6 +105,7 @@ async def get_case(case_id: str):
 
 
 @app.post("/api/cases/{case_id}/evaluate-gaps", response_model=CaseDetail, tags=["Gap Engine"])
+@app.post("/api/cases/{case_id}/evaluate", response_model=CaseDetail, tags=["Gap Engine"])
 async def evaluate_gaps_endpoint(case_id: str):
     """
     Evaluates the full requirements checklist against all received documents in one pass.
@@ -311,6 +312,7 @@ async def advance_cadence_endpoint(case_id: str, days: float = 3.0):
 
 
 @app.get("/api/metrics", response_model=TelemetryMetrics, tags=["Metrics"])
+@app.get("/api/telemetry/metrics", response_model=TelemetryMetrics, tags=["Metrics"])
 async def get_metrics_endpoint():
     """
     Returns the comprehensive 6-vector pilot metrics and primary SLA indicators.
@@ -319,6 +321,7 @@ async def get_metrics_endpoint():
 
 
 @app.post("/api/metrics/backtest", tags=["Metrics"])
+@app.post("/api/telemetry/backtest", tags=["Metrics"])
 async def run_backtest_endpoint(sample_size: int = 50):
     """
     Runs the FDE Backtest simulation comparing Day-0 full pack gap checks against legacy sequential chases.

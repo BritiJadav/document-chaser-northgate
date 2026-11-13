@@ -11,31 +11,37 @@ if (-not (Test-Path $pythonExe)) {
     $pythonExe = (Get-Command python -ErrorAction SilentlyContinue).Source
 }
 
-Write-Host "Using Python: $pythonExe" -ForegroundColor DarkGray
-Write-Host "Starting FastAPI Backend on http://127.0.0.1:8000..." -ForegroundColor Yellow
+# 1. Start or Verify Backend
+$backendOk = $false
+try {
+    $res = Invoke-RestMethod -Uri "http://127.0.0.1:8000/health" -Method Get -TimeoutSec 1 2>$null
+    if ($res.status -eq "ok") {
+        $backendOk = $true
+        Write-Host "FastAPI Backend is active on http://127.0.0.1:8000" -ForegroundColor Green
+    }
+} catch {}
 
-$backendProc = Start-Process -FilePath $pythonExe -ArgumentList "-m uvicorn app.main:app --host 127.0.0.1 --port 8000" -WorkingDirectory $backendDir -PassThru
-
-$ready = $false
-for ($i = 0; $i -lt 10; $i++) {
-    Start-Sleep -Milliseconds 500
-    try {
-        $res = Invoke-RestMethod -Uri "http://127.0.0.1:8000/health" -Method Get -TimeoutSec 1 2>$null
-        if ($res.status -eq "ok") {
-            $ready = $true
-            break
-        }
-    } catch {}
+if (-not $backendOk) {
+    Write-Host "Starting FastAPI Backend on http://127.0.0.1:8000..." -ForegroundColor Yellow
+    Start-Process -FilePath $pythonExe -ArgumentList "-m uvicorn app.main:app --host 127.0.0.1 --port 8000" -WorkingDirectory $backendDir
+    
+    # Wait up to 5 seconds for backend to become ready
+    for ($i = 0; $i -lt 10; $i++) {
+        Start-Sleep -Milliseconds 500
+        try {
+            $check = Invoke-RestMethod -Uri "http://127.0.0.1:8000/health" -Method Get -TimeoutSec 1 2>$null
+            if ($check.status -eq "ok") {
+                $backendOk = $true
+                Write-Host "Backend started successfully!" -ForegroundColor Green
+                break
+            }
+        } catch {}
+    }
 }
 
-if ($ready) {
-    Write-Host "Backend is READY on http://127.0.0.1:8000" -ForegroundColor Green
-} else {
-    Write-Host "Starting Vite frontend..." -ForegroundColor Yellow
-}
-
+# 2. Start Frontend
 Write-Host "`nStarting Vite React Frontend on http://localhost:5173..." -ForegroundColor Yellow
-$frontendProc = Start-Process -FilePath "cmd.exe" -ArgumentList "/c npm run dev" -WorkingDirectory $frontendDir -PassThru
+Start-Process -FilePath "cmd.exe" -ArgumentList "/c npm run dev" -WorkingDirectory $frontendDir
 
 Start-Sleep -Seconds 3
 
